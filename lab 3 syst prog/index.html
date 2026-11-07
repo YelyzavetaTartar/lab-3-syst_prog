@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Візуалізація AST дерева</title>
+    <!-- Підключаємо бібліотеку D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+        }
+
+        #tree-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .node circle {
+            fill: #fff;
+            stroke: #4CAF50;
+            stroke-width: 3px;
+        }
+
+        .node text {
+            font: 16px sans-serif;
+            font-weight: bold;
+        }
+
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+
+        .upload-btn {
+            margin: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h2>Синтаксичне дерево (AST)</h2>
+    <p>Виберіть згенерований файл <b>ast.json</b> з вашої папки проєкту:</p>
+
+    <input type="file" id="fileInput" accept=".json" class="upload-btn">
+
+    <div id="tree-container">
+        <div id="tree"></div>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = JSON.parse(e.target.result);
+                    drawTree(data);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function drawTree(treeData) {
+            document.getElementById('tree').innerHTML = ""; // Очищаємо екран перед новим малюванням
+
+            const width = 800, height = 500;
+            const margin = {top: 50, right: 90, bottom: 50, left: 90};
+
+            const svg = d3.select("#tree").append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", "translate(" + width/2 + "," + margin.top + ")");
+
+            const tree = d3.tree().size([width - 200, height - 100]);
+            const root = d3.hierarchy(treeData);
+            tree(root);
+
+            // Центруємо корінь
+            root.x0 = 0;
+            root.each(d => d.x = d.x - (width - 200)/2);
+
+            // Малюємо лінії (зв'язки)
+            svg.selectAll(".link")
+                .data(root.links())
+                .enter().append("path")
+                .attr("class", "link")
+                .attr("d", d3.linkVertical()
+                    .x(d => d.x)
+                    .y(d => d.y));
+
+            // Малюємо вузли
+            const node = svg.selectAll(".node")
+                .data(root.descendants())
+                .enter().append("g")
+                .attr("class", "node")
+                .attr("transform", d => "translate(" + d.x + "," + d.y + ")");
+
+            node.append("circle").attr("r", 22);
+
+            node.append("text")
+                .attr("dy", ".35em")
+                .attr("x", 0)
+                .style("text-anchor", "middle")
+                .text(d => d.data.name);
+        }
+    </script>
+</body>
+</html>
